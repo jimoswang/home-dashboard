@@ -2,7 +2,8 @@
 
 一個為香港家庭而設、繁體中文＋英文並示的全螢幕家居資訊板。支援 Samsung Android 平板／手機及 iPad mini 4（iPadOS 15）或以上裝置。
 
-正式網站：<https://jimoswang.github.io/home-dashboard/>
+正式網站：<https://jimoswang.github.io/home-dashboard/>  
+部署：GitHub Actions 自動測試及發佈
 
 ## V1 功能
 

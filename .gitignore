@@ -1,0 +1,8 @@
+node_modules/
+dist/
+release/
+android/
+*.tsbuildinfo
+*.log
+dashboard-preview*.png
+.DS_Store

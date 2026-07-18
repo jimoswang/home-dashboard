@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "activeProfileId": "hong-kong-home",
+  "refreshSeconds": 30,
+  "profiles": [
+    {
+      "id": "hong-kong-home",
+      "nameTc": "香港屋企",
+      "nameEn": "Hong Kong Home",
+      "weatherStationTc": "沙田",
+      "weatherStationEn": "Sha Tin",
+      "transitBoards": [
+        {
+          "id": "kmb-289k-university",
+          "labelTc": "大學站",
+          "labelEn": "University Station",
+          "route": "289K",
+          "sources": [
+            {
+              "provider": "kmb",
+              "operator": "KMB/LWB",
+              "route": "289K",
+              "direction": "outbound",
+              "directionCode": "O",
+              "serviceType": "1",
+              "stopId": "888C8A612C998895",
+              "stopSequence": 1,
+              "stopNameTc": "大學站 (ST906)",
+              "stopNameEn": "UNIVERSITY STATION (ST906)",
+              "destinationTc": "富安花園 (循環線)",
+              "destinationEn": "Chevalier Garden (Circular)"
+            }
+          ],
+          "etaLimit": 3,
+          "sortOrder": 0
+        }
+      ],
+      "display": {
+        "alwaysOn": false,
+        "sleepTime": "20:00",
+        "wakeTime": "06:30",
+        "theme": "kmb",
+        "pixelShift": true
+      }
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchBoardEta, radarCandidateUrls } from "./api";
+import { fetchBoardEta, POLL_INTERVALS, radarCandidateUrls } from "./api";
 import { defaultConfig } from "./config";
 
 describe("KMB ETA normalization", () => {
@@ -31,5 +31,11 @@ describe("HKO 128 km radar candidates", () => {
       "https://www.hko.gov.hk/wxinfo/radars/rad_128_png/2d128nradar_202607181318.jpg"
     ]);
     expect(candidates[1].capturedAt).toBe("2026-07-18T05:24:00.000Z");
+  });
+
+  it("checks for a new radar image every five minutes while respecting six-minute scan slots", () => {
+    expect(POLL_INTERVALS.radar).toBe(5 * 60_000);
+    expect(POLL_INTERVALS.warnings).toBe(5 * 60_000);
+    expect(POLL_INTERVALS.weather).toBe(10 * 60_000);
   });
 });

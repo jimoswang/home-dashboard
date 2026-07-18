@@ -26,8 +26,10 @@ import {
   fetchBoardEta,
   fetchRadar,
   fetchWeather,
+  fetchWeatherWarnings,
   loadStops,
   loadWeatherStations,
+  POLL_INTERVALS,
   searchRouteVariants
 } from "./api";
 import {
@@ -482,10 +484,11 @@ function SettingsPanel({ config, onChange, onClose }: SettingsPanelProps) {
         <RouteBuilder onAdd={addBoard} />
 
         <section className="settings-card">
-          <div className="section-title"><RefreshCw /><div><h3>更新頻率</h3><p>REFRESH RATE</p></div></div>
+          <div className="section-title"><RefreshCw /><div><h3>巴士更新頻率</h3><p>BUS REFRESH RATE</p></div></div>
           <div className="segmented">
             {[30, 60, 120, 300].map((seconds) => <button key={seconds} className={draft.refreshSeconds === seconds ? "active" : ""} onClick={() => setDraft((current) => ({ ...current, refreshSeconds: seconds }))}>{seconds < 60 ? `${seconds}秒` : `${seconds / 60}分鐘`}<small>{seconds}s</small></button>)}
           </div>
+          <p className="helper-text">天氣每10分鐘、警告及雷達每5分鐘更新。Weather every 10m; warnings and radar every 5m.</p>
         </section>
 
         <section className="settings-card">
@@ -531,15 +534,28 @@ export default function App() {
   const holdFrame = useRef<number | null>(null);
   const activeProfile = config.profiles.find((item) => item.id === config.activeProfileId) ?? config.profiles[0];
 
-  const refresh = useCallback(async () => {
+  const refreshTransit = useCallback(async () => {
     setRefreshing(true);
-    const weatherPromise = fetchWeather(activeProfile.weatherStationTc, activeProfile.weatherStationEn);
-    const etaPromise = Promise.all(activeProfile.transitBoards.map(fetchBoardEta));
-    const [weatherResult, etaResults] = await Promise.all([weatherPromise, etaPromise]);
-    setWeather(weatherResult);
-    setTransit(Object.fromEntries(etaResults.map((snapshot) => [snapshot.boardId, snapshot])));
-    setRefreshing(false);
-  }, [activeProfile]);
+    try {
+      const etaResults = await Promise.all(activeProfile.transitBoards.map(fetchBoardEta));
+      setTransit(Object.fromEntries(etaResults.map((snapshot) => [snapshot.boardId, snapshot])));
+    } finally {
+      setRefreshing(false);
+    }
+  }, [activeProfile.transitBoards]);
+
+  const refreshWeather = useCallback(async () => {
+    setWeather(await fetchWeather(activeProfile.weatherStationTc, activeProfile.weatherStationEn));
+  }, [activeProfile.weatherStationEn, activeProfile.weatherStationTc]);
+
+  const refreshWarnings = useCallback(async () => {
+    try {
+      const result = await fetchWeatherWarnings();
+      setWeather((current) => ({ ...current, warnings: result.warnings }));
+    } catch {
+      // Keep the last warning summary if HKO is temporarily unavailable.
+    }
+  }, []);
 
   const refreshRadar = useCallback(async () => {
     setRadar(await fetchRadar());
@@ -562,14 +578,25 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    void refresh();
-    const timer = window.setInterval(() => void refresh(), config.refreshSeconds * 1_000);
+    void refreshTransit();
+    const timer = window.setInterval(() => void refreshTransit(), config.refreshSeconds * 1_000);
     return () => window.clearInterval(timer);
-  }, [config.refreshSeconds, refresh]);
+  }, [config.refreshSeconds, refreshTransit]);
+
+  useEffect(() => {
+    void refreshWeather();
+    const timer = window.setInterval(() => void refreshWeather(), POLL_INTERVALS.weather);
+    return () => window.clearInterval(timer);
+  }, [refreshWeather]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => void refreshWarnings(), POLL_INTERVALS.warnings);
+    return () => window.clearInterval(timer);
+  }, [refreshWarnings]);
 
   useEffect(() => {
     void refreshRadar();
-    const timer = window.setInterval(() => void refreshRadar(), 6 * 60_000);
+    const timer = window.setInterval(() => void refreshRadar(), POLL_INTERVALS.radar);
     return () => window.clearInterval(timer);
   }, [refreshRadar]);
 
@@ -664,7 +691,7 @@ export default function App() {
             {online ? <Wifi /> : <WifiOff />}
             <span><b>{online ? overallDegraded ? "部分服務受阻" : "連線正常" : "離線模式"}</b><small>{online ? overallDegraded ? "PARTIAL SERVICE" : "CONNECTED" : "OFFLINE MODE"}</small></span>
           </div>
-          <button className={`refresh-button ${refreshing ? "spinning" : ""}`} onClick={() => void Promise.all([refresh(), refreshRadar()])} aria-label="Refresh"><RefreshCw /></button>
+          <button className={`refresh-button ${refreshing ? "spinning" : ""}`} onClick={() => void Promise.all([refreshTransit(), refreshWeather(), refreshRadar()])} aria-label="Refresh"><RefreshCw /></button>
         </div>
       </header>
 
@@ -706,7 +733,7 @@ export default function App() {
           ) : (
             <div className="radar-unavailable"><CloudRain /><span><b>雷達圖暫時無法連線</b><small>Radar temporarily unavailable</small></span></div>
           )}
-          <footer>天文台更新 HKO updated {formatUpdated(weather.updatedAt)} · 雷達約每6分鐘更新</footer>
+          <footer>天文台更新 HKO updated {formatUpdated(weather.updatedAt)} · 雷達每5分鐘檢查 Radar checked every 5m</footer>
         </section>
 
         <section className="bus-panel panel">

@@ -72,7 +72,7 @@ const emptyRadar: RadarSnapshot = {
   freshness: "unavailable"
 };
 
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.1.1";
 const APP_BUILD = (import.meta.env.VITE_BUILD_ID || "LOCAL").slice(0, 7).toUpperCase();
 
 function newId(prefix: string): string {
@@ -351,7 +351,7 @@ function SettingsPanel({ config, onChange, onClose }: SettingsPanelProps) {
     const next: Profile = {
       id,
       nameTc: "新屋企",
-      nameEn: "New Home",
+      nameEn: "新屋企",
       weatherStationTc: "沙田",
       weatherStationEn: "Sha Tin",
       transitBoards: [],
@@ -429,13 +429,10 @@ function SettingsPanel({ config, onChange, onClose }: SettingsPanelProps) {
         <section className="settings-card">
           <div className="section-title"><Settings /><div><h3>Profile</h3><p>HOME PROFILE</p></div></div>
           <div className="profile-tabs">
-            {draft.profiles.map((item) => <button key={item.id} className={item.id === draft.activeProfileId ? "active" : ""} onClick={() => setDraft((current) => ({ ...current, activeProfileId: item.id }))}>{item.nameTc}<small>{item.nameEn}</small></button>)}
+            {draft.profiles.map((item) => <button key={item.id} className={item.id === draft.activeProfileId ? "active" : ""} onClick={() => setDraft((current) => ({ ...current, activeProfileId: item.id }))}>{item.nameTc}</button>)}
             <button className="add-profile" onClick={addProfile}><Plus />新增</button>
           </div>
-          <div className="two-columns">
-            <label><span>中文名稱</span><input value={profile.nameTc} onChange={(event) => updateProfile((item) => ({ ...item, nameTc: event.target.value }))} /></label>
-            <label><span>English name</span><input value={profile.nameEn} onChange={(event) => updateProfile((item) => ({ ...item, nameEn: event.target.value }))} /></label>
-          </div>
+          <label className="full-field"><span>Profile 名稱 Profile name</span><input value={profile.nameTc} onChange={(event) => updateProfile((item) => ({ ...item, nameTc: event.target.value, nameEn: event.target.value }))} /></label>
           {draft.profiles.length > 1 && <button className="danger-button" onClick={deleteProfile}><Trash2 />刪除此Profile Delete</button>}
         </section>
 
@@ -736,7 +733,7 @@ export default function App() {
         </div>
         <div className="profile-zone">
           <select value={config.activeProfileId} onChange={(event) => setConfig((current) => ({ ...current, activeProfileId: event.target.value }))}>
-            {config.profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.nameTc} · {profile.nameEn}</option>)}
+            {config.profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.nameTc}</option>)}
           </select>
           <div className={`connection ${connectionClass}`} title={`${connectionTitle} · ${connectionSubtitle}`}>
             {online ? <Wifi /> : <WifiOff />}

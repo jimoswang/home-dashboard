@@ -72,6 +72,9 @@ const emptyRadar: RadarSnapshot = {
   freshness: "unavailable"
 };
 
+const APP_VERSION = "1.1.0";
+const APP_BUILD = (import.meta.env.VITE_BUILD_ID || "LOCAL").slice(0, 7).toUpperCase();
+
 function newId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -524,6 +527,7 @@ export default function App() {
   const [transit, setTransit] = useState<Record<string, TransitSnapshot>>({});
   const [online, setOnline] = useState(navigator.onLine);
   const [refreshing, setRefreshing] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pinOpen, setPinOpen] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
@@ -560,6 +564,21 @@ export default function App() {
   const refreshRadar = useCallback(async () => {
     setRadar(await fetchRadar());
   }, []);
+
+  const refreshAllAndCheckUpdate = async () => {
+    setCheckingUpdate(true);
+    try {
+      await Promise.all([refreshTransit(), refreshWeather(), refreshRadar()]);
+      if ("serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        await registration?.update();
+      }
+    } catch {
+      // Data requests already provide cache fallbacks. A failed update check must not interrupt the dashboard.
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1_000);
@@ -723,7 +742,12 @@ export default function App() {
             {online ? <Wifi /> : <WifiOff />}
             <span><b>{connectionTitle}</b><small>{connectionSubtitle}</small></span>
           </div>
-          <button className={`refresh-button ${refreshing ? "spinning" : ""}`} onClick={() => void Promise.all([refreshTransit(), refreshWeather(), refreshRadar()])} aria-label="Refresh"><RefreshCw /></button>
+          <button
+            className={`refresh-button ${refreshing || checkingUpdate ? "spinning" : ""}`}
+            onClick={() => void refreshAllAndCheckUpdate()}
+            aria-label="更新資料及檢查新版 Refresh data and check for updates"
+            title="更新資料及檢查新版"
+          ><RefreshCw /></button>
         </div>
       </header>
 
@@ -803,7 +827,7 @@ export default function App() {
       <footer className="app-footer">
         <span>資料來源 DATA: KMB · LWB · Citybus · 香港天文台 HKO</span>
         <button onClick={() => setManualSleep(true)}><MonitorOff />立即熄屏 Sleep now</button>
-        <span>長按時間3秒進入設定 · Hold clock 3s for Settings</span>
+        <span>長按時間3秒進入設定 · Hold clock 3s for Settings<b className="app-version">VERSION v{APP_VERSION} · BUILD {APP_BUILD}</b></span>
       </footer>
 
       {pinOpen && <PinDialog title="管理員設定" subtitle="ENTER ADMIN PIN" onSubmit={openSettingsAfterPin} onClose={() => setPinOpen(false)} />}

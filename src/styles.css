@@ -155,7 +155,6 @@ body::after { right: -18vmax; bottom: -24vmax; background: radial-gradient(circl
   border-radius: 28px;
   background: linear-gradient(155deg, rgba(19, 43, 58, 0.97), rgba(10, 23, 36, 0.98));
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(6px);
 }
 .panel::before {
   content: "";
@@ -361,18 +360,20 @@ input:disabled { opacity: .45; }
 .sleep-screen span { font-size: 31px; font-variant-numeric: tabular-nums; }
 .sleep-screen small { margin-top: 10px; font-size: 9px; }
 
-/* Motion: entrance transitions and live-data cues. Everything here is
-   transform/opacity only (cheap to composite) and gated behind
-   prefers-reduced-motion so the always-on kiosk stays calm when asked. */
+/* Motion policy for this dashboard: the primary audience is elderly Hong Kong
+   users, and the panel runs 24/7, so clarity beats spectacle. Motion is limited
+   to (a) one-time entrance transitions on app load / when a modal opens, and
+   (b) a single functional attention cue on active weather warnings. We do NOT
+   animate the live data itself (bus minutes, temperature) — those refresh every
+   30s and any repeating motion there would make the most important numbers hard
+   to read. All motion is transform/opacity only, and the calm defaults do not
+   rely on the OS reduced-motion flag, which few elderly users will have set. */
 @media (prefers-reduced-motion: no-preference) {
   @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes fade-in-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes scale-in { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
-  @keyframes pop-in { from { opacity: 0; transform: scale(.92); } to { opacity: 1; transform: scale(1); } }
-  @keyframes icon-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-  @keyframes warn-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.14); } }
-  @keyframes live-ring { 0% { transform: scale(1); opacity: .55; } 100% { transform: scale(2.6); opacity: 0; } }
-  @keyframes shimmer-slide { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+  @keyframes warn-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+  @keyframes live-ring { 0% { transform: scale(1); opacity: .5; } 100% { transform: scale(2.4); opacity: 0; } }
 
   .topbar { animation: fade-in-up .5s cubic-bezier(.16, .8, .34, 1) both; }
   .warning-strip { animation: fade-in-up .45s cubic-bezier(.16, .8, .34, 1) both; }
@@ -380,10 +381,9 @@ input:disabled { opacity: .45; }
   .bus-panel { animation-delay: .08s; }
   .app-footer { animation: fade-in .6s ease .1s both; }
 
-  .weather-main > svg { animation: icon-float 6s ease-in-out infinite; }
-  .warning-strip svg { animation: warn-pulse 1.8s ease-in-out infinite; }
-  .eta { animation: pop-in .35s cubic-bezier(.16, .8, .34, 1) both; }
-  .radar-preview img { animation: fade-in .4s ease both; }
+  /* A gentle pulse on the warning icon only — a live typhoon or rainstorm
+     signal is exactly what an elderly user must not miss. */
+  .warning-strip svg { animation: warn-pulse 2.6s ease-in-out infinite; }
 
   .status-pill.fresh { position: relative; }
   .status-pill.fresh::before,
@@ -397,7 +397,7 @@ input:disabled { opacity: .45; }
     border-radius: 50%;
     background: var(--mint);
   }
-  .status-pill.fresh::before { animation: live-ring 2.2s ease-out infinite; }
+  .status-pill.fresh::before { animation: live-ring 2.6s ease-out infinite; }
 
   .modal-backdrop, .settings-shell, .radar-lightbox { animation: fade-in .25s ease both; }
   .pin-dialog, .radar-lightbox-card { animation: scale-in .3s cubic-bezier(.16, .8, .34, 1) both; }
@@ -459,12 +459,8 @@ input:disabled { opacity: .45; }
   padding: 16px 22px;
   border-radius: 24px;
   color: #fff;
-  background: linear-gradient(100deg, #d9102b, #ef2439, #d9102b);
-  background-size: 200% 100%;
+  background: linear-gradient(100deg, #d9102b, #ef2439);
   box-shadow: 0 12px 30px rgba(190, 16, 42, .2);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .theme-kmb .topbar { animation: fade-in-up .5s cubic-bezier(.16, .8, .34, 1) both, shimmer-slide 14s ease-in-out infinite; }
 }
 .theme-kmb .panel::before { background: linear-gradient(160deg, rgba(0, 0, 0, .08), rgba(0, 0, 0, 0) 42%); }
 .theme-kmb .status-pill.fresh::before,

@@ -655,7 +655,39 @@ export default function App() {
   };
 
   const profileBoards = [...activeProfile.transitBoards].sort((a, b) => a.sortOrder - b.sortOrder);
-  const overallDegraded = weather.freshness !== "fresh" || radar.freshness !== "fresh" || Object.values(transit).some((item) => item.freshness !== "fresh");
+  const servicesLoaded = weather.fetchedAt !== "" && radar.fetchedAt !== "" && profileBoards.every((board) => transit[board.id]?.fetchedAt);
+  const affectedServicesTc = [
+    weather.freshness !== "fresh" ? "天氣" : null,
+    radar.freshness !== "fresh" ? "雷達" : null,
+    ...profileBoards.map((board) => {
+      const snapshot = transit[board.id];
+      return snapshot && (snapshot.freshness !== "fresh" || snapshot.error) ? `巴士 ${board.route}` : null;
+    })
+  ].filter((label): label is string => Boolean(label));
+  const affectedServicesEn = [
+    weather.freshness !== "fresh" ? "WEATHER" : null,
+    radar.freshness !== "fresh" ? "RADAR" : null,
+    ...profileBoards.map((board) => {
+      const snapshot = transit[board.id];
+      return snapshot && (snapshot.freshness !== "fresh" || snapshot.error) ? `BUS ${board.route}` : null;
+    })
+  ].filter((label): label is string => Boolean(label));
+  const overallDegraded = servicesLoaded && affectedServicesTc.length > 0;
+  const connectionClass = !online ? "offline" : !servicesLoaded ? "loading" : overallDegraded ? "degraded" : "online";
+  const connectionTitle = !online
+    ? "離線模式"
+    : !servicesLoaded
+      ? "正在載入資料"
+      : overallDegraded
+        ? `受阻：${affectedServicesTc.join(" · ")}`
+        : "連線正常";
+  const connectionSubtitle = !online
+    ? "OFFLINE MODE"
+    : !servicesLoaded
+      ? "LOADING DATA"
+      : overallDegraded
+        ? affectedServicesEn.join(" · ")
+        : "CONNECTED";
   const radarDelayed = radar.freshness === "stale" || (radar.capturedAt ? now.getTime() - new Date(radar.capturedAt).getTime() > 18 * 60_000 : false);
   const pixelShift = activeProfile.display.pixelShift ? `shift-${now.getMinutes() % 4}` : "";
 
@@ -687,9 +719,9 @@ export default function App() {
           <select value={config.activeProfileId} onChange={(event) => setConfig((current) => ({ ...current, activeProfileId: event.target.value }))}>
             {config.profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.nameTc} · {profile.nameEn}</option>)}
           </select>
-          <div className={`connection ${online ? overallDegraded ? "degraded" : "online" : "offline"}`}>
+          <div className={`connection ${connectionClass}`} title={`${connectionTitle} · ${connectionSubtitle}`}>
             {online ? <Wifi /> : <WifiOff />}
-            <span><b>{online ? overallDegraded ? "部分服務受阻" : "連線正常" : "離線模式"}</b><small>{online ? overallDegraded ? "PARTIAL SERVICE" : "CONNECTED" : "OFFLINE MODE"}</small></span>
+            <span><b>{connectionTitle}</b><small>{connectionSubtitle}</small></span>
           </div>
           <button className={`refresh-button ${refreshing ? "spinning" : ""}`} onClick={() => void Promise.all([refreshTransit(), refreshWeather(), refreshRadar()])} aria-label="Refresh"><RefreshCw /></button>
         </div>

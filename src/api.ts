@@ -17,6 +17,12 @@ const HKO_BASE = "https://data.weather.gov.hk/weatherAPI/opendata/weather.php";
 const HKO_RADAR_BASE = "https://www.hko.gov.hk/wxinfo/radars/rad_128_png";
 const HKO_RADAR_CACHE_KEY = "radar:hko:128km:latest";
 
+export const POLL_INTERVALS = {
+  weather: 10 * 60_000,
+  warnings: 5 * 60_000,
+  radar: 5 * 60_000
+} as const;
+
 interface FetchResult<T> {
   data: T;
   stale: boolean;
@@ -376,6 +382,27 @@ interface HkoWarningSummary {
   [code: string]: { code: string; name: string };
 }
 
+interface WeatherWarningsResult {
+  warnings: WeatherWarning[];
+  stale: boolean;
+}
+
+export async function fetchWeatherWarnings(): Promise<WeatherWarningsResult> {
+  const [warningsTc, warningsEn] = await Promise.all([
+    requestJson<HkoWarningSummary>(`${HKO_BASE}?dataType=warnsum&lang=tc`, "weather:hko:warnings:tc"),
+    requestJson<HkoWarningSummary>(`${HKO_BASE}?dataType=warnsum&lang=en`, "weather:hko:warnings:en")
+  ]);
+  const warningCodes = Object.keys(warningsTc.data);
+  return {
+    warnings: warningCodes.map((code) => ({
+      code,
+      nameTc: warningsTc.data[code]?.name ?? code,
+      nameEn: warningsEn.data[code]?.name ?? code
+    })),
+    stale: warningsTc.stale || warningsEn.stale
+  };
+}
+
 export async function loadWeatherStations(): Promise<Array<{ tc: string; en: string }>> {
   const [tc, en] = await Promise.all([
     requestJson<HkoCurrent>(`${HKO_BASE}?dataType=rhrread&lang=tc`, "weather:hko:current:tc"),
@@ -388,29 +415,22 @@ export async function loadWeatherStations(): Promise<Array<{ tc: string; en: str
 
 export async function fetchWeather(stationTc: string, stationEn: string): Promise<WeatherSnapshot> {
   try {
-    const [currentTc, currentEn, warningsTc, warningsEn] = await Promise.all([
+    const [currentTc, currentEn, warningResult] = await Promise.all([
       requestJson<HkoCurrent>(`${HKO_BASE}?dataType=rhrread&lang=tc`, "weather:hko:current:tc"),
       requestJson<HkoCurrent>(`${HKO_BASE}?dataType=rhrread&lang=en`, "weather:hko:current:en"),
-      requestJson<HkoWarningSummary>(`${HKO_BASE}?dataType=warnsum&lang=tc`, "weather:hko:warnings:tc"),
-      requestJson<HkoWarningSummary>(`${HKO_BASE}?dataType=warnsum&lang=en`, "weather:hko:warnings:en")
+      fetchWeatherWarnings()
     ]);
     const temperature = currentTc.data.temperature?.data.find((item) => item.place === stationTc)?.value ?? null;
     const rainfall = currentTc.data.rainfall?.data.find((item) => item.place === stationTc);
     const humidity = currentTc.data.humidity?.data[0]?.value ?? null;
-    const warningCodes = Object.keys(warningsTc.data);
-    const warnings: WeatherWarning[] = warningCodes.map((code) => ({
-      code,
-      nameTc: warningsTc.data[code]?.name ?? code,
-      nameEn: warningsEn.data[code]?.name ?? code
-    }));
-    const stale = [currentTc, currentEn, warningsTc, warningsEn].some((result) => result.stale);
+    const stale = currentTc.stale || currentEn.stale || warningResult.stale;
     return {
       temperature,
       humidity,
       rainfallMin: rainfall?.min ?? null,
       rainfallMax: rainfall?.max ?? null,
       iconCode: currentTc.data.icon?.[0] ?? null,
-      warnings,
+      warnings: warningResult.warnings,
       warningMessageTc: currentTc.data.warningMessage ?? [],
       warningMessageEn: currentEn.data.warningMessage ?? [],
       updatedAt: currentTc.data.updateTime ?? new Date().toISOString(),

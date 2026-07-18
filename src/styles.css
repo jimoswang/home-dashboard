@@ -518,26 +518,233 @@ input:disabled { opacity: .45; }
 
 @media (orientation: portrait) {
   body { overflow: auto; }
-  .app-shell { height: auto; min-height: 100vh; overflow: auto; }
-  .topbar { align-items: flex-start; }
-  .clock-zone { align-items: flex-start; flex-direction: column; gap: 10px; }
-  .date { min-width: 0; }
-  .profile-zone { flex-direction: column; align-items: flex-end; }
+  .app-shell { height: auto; min-height: 100vh; overflow: visible; }
   .dashboard-grid { grid-template-columns: 1fr; }
-  .weather-card { min-height: 510px; }
-  .bus-panel { min-height: 600px; }
 }
 
+/* Phone mode. The 320px floor deliberately covers the original iPhone SE;
+   newer SE models use the same layout with a little more breathing room. */
 @media (max-width: 700px) {
-  .app-shell { min-height: 900px; }
-  .topbar { flex-direction: column; }
-  .profile-zone { width: 100%; flex-direction: row; justify-content: space-between; }
-  .dashboard-grid { grid-template-columns: 1fr; }
-  .bus-board { grid-template-columns: 95px 1fr; }
-  .eta-list { grid-column: 1 / -1; }
-  .board-status { grid-column: 1 / -1; flex-direction: row; }
-  .two-columns, .stop-list { grid-template-columns: 1fr; }
+  html, body, #root { min-width: 320px; }
+  body { overflow-x: hidden; }
+  .app-shell {
+    width: 100%;
+    min-height: 100vh;
+    padding: max(8px, env(safe-area-inset-top)) 8px max(12px, env(safe-area-inset-bottom));
+    grid-template-rows: auto auto auto auto;
+    gap: 8px;
+    transform: none !important;
+  }
+
+  .topbar,
+  .theme-kmb .topbar {
+    width: 100%;
+    min-height: 0;
+    padding: 11px 12px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    border-radius: 18px;
+  }
+  .clock-zone {
+    width: 100%;
+    min-width: 0;
+    padding: 2px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
+  }
+  .clock-zone::after { inset: -4px; border-radius: 14px; padding: 2px; }
+  .clock { min-width: 0; letter-spacing: -.07em; }
+  .clock span { font-size: 49px; line-height: .88; }
+  .clock small { margin-left: 7px; font-size: 14px; }
+  .date { min-width: 0; overflow: hidden; }
+  .date b { overflow: hidden; font-size: 15px; text-overflow: ellipsis; white-space: nowrap; }
+  .date span { margin-top: 3px; overflow: hidden; font-size: 8px; letter-spacing: .04em; text-overflow: ellipsis; white-space: nowrap; }
+
+  .profile-zone {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .profile-zone select {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 42px;
+    padding: 8px 25px 8px 10px;
+    border-radius: 11px;
+    font-size: 12px;
+  }
+  .connection {
+    min-width: 42px;
+    min-height: 42px;
+    padding: 6px 8px;
+    justify-content: center;
+    border-radius: 11px;
+  }
+  .connection svg { width: 19px; height: 19px; }
+  .connection span { display: none; }
+  .refresh-button { width: 42px; height: 42px; border-radius: 11px; }
+  .refresh-button svg { width: 19px; height: 19px; }
+
+  .warning-strip {
+    min-height: 52px;
+    padding: 9px 12px;
+    gap: 10px;
+    border-radius: 14px;
+  }
+  .warning-strip svg { width: 22px; }
+  .warning-strip b { font-size: 15px; line-height: 1.25; }
+  .warning-strip span { margin-top: 1px; font-size: 9px; }
+
+  .dashboard-grid { display: flex; flex-direction: column; gap: 8px; }
+  .bus-panel { order: -1; min-height: 0; }
+  .weather-card { min-height: 0; }
+  .panel { border-radius: 18px; }
+  .panel-heading { min-height: 54px; padding: 10px 13px; }
+  .panel-heading h2 { font-size: 22px; }
+  .panel-heading p { margin-top: 1px; font-size: 8px; letter-spacing: .11em; }
+  .next-refresh { font-size: 12px; }
+  .next-refresh span { margin-top: 1px; font-size: 7px; }
+
+  .bus-board-list { padding: 7px; gap: 8px; overflow: visible; }
+  .bus-board {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 8px;
+    grid-template-columns: 72px minmax(0, 1fr) 42px;
+    grid-template-rows: minmax(82px, auto) auto;
+    align-items: stretch;
+    gap: 7px;
+    border-radius: 13px;
+  }
+  .route-badge { min-width: 0; border-radius: 10px; }
+  .route-badge svg { width: 20px; height: 20px; }
+  .route-badge strong { margin-top: 2px; font-size: 31px; }
+  .route-badge small { max-width: 64px; margin-top: 5px; font-size: 6px; }
+  .stop-info { min-width: 0; }
+  .stop-info > b { overflow: hidden; font-size: 18px; text-overflow: ellipsis; white-space: nowrap; }
+  .stop-info > span { margin-top: 2px; overflow: hidden; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+  .stop-info em { margin-top: 7px; overflow: hidden; font-size: 10px; line-height: 1.25; }
+  .stop-info em small { margin-top: 2px; overflow: hidden; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
+  .board-status { min-width: 0; gap: 4px; }
+  .board-status .status-pill { min-width: 40px; padding: 5px 2px; border-radius: 8px; }
+  .board-status .status-pill b { font-size: 9px; }
+  .board-status .status-pill small { font-size: 5px; }
+  .board-status > small { font-size: 5px; line-height: 1.25; }
+  .eta-list {
+    min-width: 0;
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 5px;
+  }
+  .eta {
+    min-width: 0;
+    min-height: 88px;
+    padding: 4px 2px;
+    border-radius: 8px;
+  }
+  .eta.next { border-width: 2px; }
+  .eta strong { font-size: clamp(32px, 11.5vw, 42px); }
+  .eta span { margin-top: 5px; font-size: 7px; letter-spacing: .03em; }
+  .eta small { margin-top: 5px; font-size: 5.5px; white-space: nowrap; }
+  .no-eta { min-height: 88px; border-radius: 8px; }
+  .no-eta b { font-size: 16px; }
+  .no-eta span { margin-top: 3px; font-size: 9px; }
+  .empty-dashboard { min-height: 180px; }
+
+  .weather-main {
+    min-height: 90px;
+    padding: 9px 13px 3px;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    gap: 8px;
+  }
+  .weather-main > svg { width: 38px; height: 38px; }
+  .temperature strong { font-size: 51px; }
+  .temperature sup { margin-left: 4px; font-size: 15px; }
+  .station-name { grid-column: auto; align-self: center; padding: 0; gap: 0; flex-direction: column; align-items: flex-start; }
+  .station-name b { font-size: 15px; }
+  .station-name span { margin-top: 2px; font-size: 8px; }
+  .weather-details { padding: 6px 10px; gap: 5px; }
+  .weather-details > div { min-width: 0; min-height: 46px; padding: 6px 8px; gap: 6px; border-radius: 10px; }
+  .weather-details svg { width: 18px; height: 18px; flex: 0 0 auto; }
+  .weather-details b { font-size: 14px; }
+  .weather-details small { font-size: 6px; white-space: nowrap; }
+  .rain-advice { margin: 1px 10px 0; padding: 8px 10px; border-radius: 10px; }
+  .rain-advice b { font-size: 14px; }
+  .rain-advice span { margin-top: 1px; font-size: 7px; }
+  .weather-message { margin: 7px 10px 0; padding: 9px 10px; }
+  .weather-message b { font-size: 11px; }
+  .weather-message span { font-size: 8px; }
+  .radar-preview,
+  .radar-unavailable { margin: 7px 10px 0; border-radius: 10px; }
+  .radar-preview { min-height: 210px; flex-basis: 210px; }
+  .radar-preview-heading { min-height: 39px; padding: 5px 8px 5px 10px; }
+  .radar-preview-heading b { font-size: 12px; }
+  .radar-preview-heading small,
+  .radar-time,
+  .radar-delay { font-size: 7px; }
+  .radar-unavailable { min-height: 95px; padding: 12px; }
+  .radar-unavailable b { font-size: 12px; }
+  .radar-unavailable small { font-size: 8px; }
+  .weather-card footer { padding: 5px 10px 8px; font-size: 6px; }
+
+  .app-footer { min-height: 38px; grid-template-columns: 1fr; justify-items: center; font-size: 8px; }
+  .app-footer span:first-child,
+  .app-footer button { display: none; }
+  .app-footer span:last-child { text-align: center; }
+
+  .radar-lightbox { padding: 5px; }
+  .radar-lightbox-card { width: 100%; max-height: 96vh; border-radius: 14px; }
+  .radar-lightbox-card > div { min-height: 54px; padding: 8px 8px 8px 13px; }
+  .radar-lightbox-card b { font-size: 16px; }
+  .radar-lightbox-card small { font-size: 8px; }
+  .radar-lightbox-card img { max-height: calc(96vh - 54px); }
+
+  .pin-dialog { width: calc(100vw - 20px); padding: 22px 14px 16px; border-radius: 20px; }
+  .pin-dialog > svg { width: 38px; }
+  .pin-dialog h2 { margin-top: 8px; font-size: 23px; }
+  .pin-dots { margin: 17px 0 13px; gap: 10px; }
+  .pin-dots i { width: 13px; height: 13px; }
+  .pin-pad { width: min(270px, 100%); grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+  .pin-pad button { height: 51px; border-radius: 12px; font-size: 20px; }
+
+  .settings-shell { grid-template-rows: auto minmax(0, 1fr); }
+  .settings-header {
+    position: relative;
+    padding: max(10px, env(safe-area-inset-top)) 10px 10px;
+    align-items: center;
+    gap: 8px;
+  }
+  .settings-header h1 { font-size: 23px; }
+  .settings-header p { font-size: 8px; }
+  .settings-actions { flex: 0 0 auto; flex-direction: row; gap: 6px; }
+  .settings-actions button { min-height: 40px; padding: 7px 10px; font-size: 11px; }
+  .settings-content { padding: 9px; gap: 9px; }
+  .settings-card { padding: 13px; border-radius: 16px; }
+  .section-title { margin-bottom: 12px; gap: 9px; }
+  .section-title h3 { font-size: 17px; }
+  .profile-tabs { flex-wrap: nowrap; overflow-x: auto; }
+  .profile-tabs button { flex: 0 0 auto; min-height: 48px; padding: 8px 11px; }
+  .two-columns,
+  .stop-list,
+  .schedule-fields { grid-template-columns: 1fr; }
+  .board-settings-row {
+    grid-template-columns: auto 62px minmax(0, 1fr) auto;
+    gap: 7px;
+  }
+  .board-settings-row > svg { display: none; }
+  .board-settings-row strong { font-size: 20px; }
+  .board-settings-row em { grid-column: 2 / 4; }
+  .choice-list button { grid-template-columns: 90px minmax(0, 1fr); padding: 10px; }
+  .route-builder .inline-form,
+  .inline-form { grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
   .segmented { grid-template-columns: 1fr 1fr; }
-  .settings-header { align-items: flex-start; }
-  .settings-actions { flex-direction: column; }
+  .backup-buttons { flex-direction: column; }
 }

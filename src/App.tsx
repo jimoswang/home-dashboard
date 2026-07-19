@@ -78,7 +78,7 @@ const emptyRadar: RadarSnapshot = {
   freshness: "unavailable"
 };
 
-const APP_VERSION = "1.3.2";
+const APP_VERSION = "1.3.3";
 const APP_BUILD = (import.meta.env.VITE_BUILD_ID || "LOCAL").slice(0, 7).toUpperCase();
 
 function newId(prefix: string): string {

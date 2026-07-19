@@ -23,13 +23,17 @@ export default defineConfig({
         ]
       },
       workbox: {
+        cleanupOutdatedCaches: true,
         globPatterns: ["**/*.{js,css,html,svg,png,webp,woff2}"],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/(data\.etabus\.gov\.hk|rt\.data\.gov\.hk|data\.weather\.gov\.hk)\//,
+            // Weather owns its timeout/retry/IndexedDB fallback in src/api.ts.
+            // Intercepting HKO here previously imposed a hidden 5-second cutoff
+            // before the application's longer timeout could take effect.
+            urlPattern: /^https:\/\/(data\.etabus\.gov\.hk|rt\.data\.gov\.hk)\//,
             handler: "NetworkFirst",
             options: {
-              cacheName: "dashboard-api-v1",
+              cacheName: "dashboard-transit-api-v2",
               networkTimeoutSeconds: 5,
               expiration: { maxEntries: 80, maxAgeSeconds: 86400 }
             }

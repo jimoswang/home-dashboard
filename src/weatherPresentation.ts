@@ -33,6 +33,8 @@ export interface WeatherPresentation {
   labelEn: string;
 }
 
+export type HeroPhoto = "sunny" | "cloudy" | "rain" | "thunderstorm" | "night";
+
 const UNKNOWN: WeatherPresentation = {
   scene: "unknown",
   glyph: "cloud",
@@ -82,4 +84,12 @@ export function resolveHeroScene(baseScene: WeatherScene, warningCodes: string[]
   if (codes.some((code) => code.startsWith("WRAIN"))) return "heavy-rain";
   if (codes.some((code) => code.startsWith("WTCSGNL") || code.includes("TC"))) return "windy";
   return baseScene;
+}
+
+export function resolveHeroPhoto(scene: WeatherScene): HeroPhoto {
+  if (scene === "sunny" || scene === "partly-cloudy" || scene === "showers") return "sunny";
+  if (scene === "cloudy" || scene === "overcast" || scene === "windy" || scene === "mist" || scene === "unknown") return "cloudy";
+  if (scene === "light-rain" || scene === "rain" || scene === "heavy-rain") return "rain";
+  if (scene === "thunderstorm") return "thunderstorm";
+  return "night";
 }

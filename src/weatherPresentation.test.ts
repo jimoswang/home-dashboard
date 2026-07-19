@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveHeroScene, resolveWeatherPresentation } from "./weatherPresentation";
+import { resolveHeroPhoto, resolveHeroScene, resolveWeatherPresentation } from "./weatherPresentation";
 
 describe("HKO weather presentation", () => {
   it("does not show a sun for cloudy, overcast, or light rain", () => {
@@ -27,5 +27,13 @@ describe("HKO weather presentation", () => {
     expect(resolveHeroScene("sunny", ["WTS"])).toBe("thunderstorm");
     expect(resolveHeroScene("sunny", ["WRAINR"])).toBe("heavy-rain");
     expect(resolveHeroScene("sunny", ["WTCSGNL"])).toBe("windy");
+  });
+
+  it("selects a stable Tolo Harbour photo for every scene family", () => {
+    expect(resolveHeroPhoto("sunny")).toBe("sunny");
+    expect(resolveHeroPhoto("overcast")).toBe("cloudy");
+    expect(resolveHeroPhoto("heavy-rain")).toBe("rain");
+    expect(resolveHeroPhoto("thunderstorm")).toBe("thunderstorm");
+    expect(resolveHeroPhoto("night-cloudy")).toBe("night");
   });
 });

@@ -75,7 +75,7 @@ button { color: inherit; }
 .weather-hero {
   position: relative;
   isolation: isolate;
-  min-height: 168px;
+  min-height: 185px;
   overflow: hidden;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
@@ -102,7 +102,17 @@ button { color: inherit; }
   align-items: center;
   gap: 28px;
 }
-.weather-scene { position: absolute; z-index: -2; inset: 0; overflow: hidden; pointer-events: none; }
+.weather-scene { position: absolute; z-index: -2; inset: 0; overflow: hidden; pointer-events: none; background: #315f79; }
+.scene-photo {
+  position: absolute;
+  inset: -2%;
+  width: 104%;
+  height: 104%;
+  object-fit: cover;
+  object-position: center;
+  transform: translate3d(0, 0, 0) scale(1.01);
+  filter: saturate(.96) contrast(1.02);
+}
 .scene-orb {
   position: absolute;
   top: 10px;
@@ -127,15 +137,17 @@ button { color: inherit; }
 .scene-cloud-two { top: 69px; left: 72%; transform: scale(.72); }
 .scene-rain {
   position: absolute;
+  z-index: 1;
   top: -45%;
-  left: 38%;
-  width: 64%;
+  left: -8%;
+  width: 116%;
   height: 190%;
   opacity: 0;
   background: repeating-linear-gradient(112deg, transparent 0 20px, rgba(214,239,255,.66) 21px 23px, transparent 24px 39px);
 }
 .scene-lightning {
   position: absolute;
+  z-index: 2;
   inset: 0;
   opacity: 0;
   background: radial-gradient(circle at 73% 20%, rgba(255,255,255,.92), transparent 18%);
@@ -198,6 +210,7 @@ button { color: inherit; }
   box-shadow: 0 0 34px rgba(232,239,255,.48);
 }
 
+.weather-motion .scene-photo { animation: scenicDrift 42s ease-in-out infinite alternate; will-change: transform; }
 .weather-motion .scene-cloud-one { animation: cloudDrift 30s ease-in-out infinite alternate; }
 .weather-motion .scene-cloud-two { animation: cloudDriftSmall 38s ease-in-out infinite alternate-reverse; }
 .weather-motion .scene-rain { animation: rainFall .9s linear infinite; }
@@ -205,6 +218,7 @@ button { color: inherit; }
 .weather-motion .scene-mist { animation: mistBreathe 8s ease-in-out infinite alternate; }
 @keyframes cloudDrift { to { transform: translate3d(80px, 3px, 0); } }
 @keyframes cloudDriftSmall { to { transform: translate3d(-62px, 4px, 0) scale(.72); } }
+@keyframes scenicDrift { to { transform: translate3d(-1.2%, .5%, 0) scale(1.025); } }
 @keyframes rainFall { to { transform: translate3d(-40px, 25%, 0); } }
 @keyframes lightningPulse { 0%, 74%, 77%, 100% { opacity: 0; } 75% { opacity: .5; } 76% { opacity: .08; } }
 @keyframes mistBreathe { to { transform: translate3d(28px, 0, 0); opacity: .48; } }
@@ -572,7 +586,7 @@ input:disabled { opacity: .45; }
 
 @media (max-width: 1100px) {
   .app-shell { min-height: 600px; padding: 15px; gap: 11px; }
-  .weather-hero { min-height: 132px; }
+  .weather-hero { min-height: 185px; }
   .weather-hero-content { padding: 8px 14px 6px; gap: 14px; }
   .clock span { font-size: 70px; }
   .date { min-width: 190px; }
@@ -603,7 +617,7 @@ input:disabled { opacity: .45; }
 
 @media (max-height: 900px) and (orientation: landscape) {
   .app-shell { min-height: 600px; padding: 15px; gap: 10px; }
-  .weather-hero { min-height: 116px; }
+  .weather-hero { min-height: 185px; }
   .weather-hero-content { padding: 5px 13px 3px; }
   .clock span { font-size: 70px; }
   .clock small { font-size: 22px; }
@@ -638,7 +652,7 @@ input:disabled { opacity: .45; }
 
 /* iPad mini 4: Safari 15 reports a 1024x768 CSS viewport in landscape. */
 @media (max-width: 1100px) and (max-height: 900px) and (orientation: landscape) {
-  .weather-hero { min-height: 112px; border-radius: 20px; }
+  .weather-hero { min-height: 185px; border-radius: 20px; }
   .scene-skyline { bottom: 29px; height: 42px; }
   .dashboard-grid { grid-template-columns: 300px minmax(0, 1fr); }
   .bus-board-list { padding: 10px; }

@@ -54,7 +54,7 @@ import type {
   TransitSnapshot,
   WeatherSnapshot
 } from "./types";
-import { resolveHeroScene, resolveWeatherPresentation, type WeatherGlyph } from "./weatherPresentation";
+import { resolveHeroPhoto, resolveHeroScene, resolveWeatherPresentation, type WeatherGlyph } from "./weatherPresentation";
 
 const emptyWeather: WeatherSnapshot = {
   temperature: null,
@@ -77,7 +77,7 @@ const emptyRadar: RadarSnapshot = {
   freshness: "unavailable"
 };
 
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.3.0";
 const APP_BUILD = (import.meta.env.VITE_BUILD_ID || "LOCAL").slice(0, 7).toUpperCase();
 
 function newId(prefix: string): string {
@@ -718,6 +718,7 @@ export default function App() {
   const pixelShift = activeProfile.display.pixelShift ? `shift-${now.getMinutes() % 4}` : "";
   const weatherPresentation = resolveWeatherPresentation(weather.iconCode);
   const heroScene = resolveHeroScene(weatherPresentation.scene, weather.warnings.map((warning) => warning.code));
+  const heroPhoto = resolveHeroPhoto(heroScene);
   const weatherMotion = activeProfile.display.weatherAnimation !== false ? "weather-motion" : "weather-still";
 
   if (sleeping && !settingsOpen) {
@@ -733,13 +734,14 @@ export default function App() {
     <div className={`app-shell theme-${activeProfile.display.theme} ${pixelShift}`}>
       <header className={`weather-hero scene-${heroScene} ${weatherMotion}`}>
         <div className="weather-scene" aria-hidden="true">
-          <span className="scene-orb" />
-          <span className="scene-cloud scene-cloud-one" />
-          <span className="scene-cloud scene-cloud-two" />
+          <img
+            className="scene-photo"
+            src={`${import.meta.env.BASE_URL}weather-scenes/tolo-cuhk-${heroPhoto}.webp`}
+            alt=""
+            decoding="async"
+          />
           <span className="scene-rain" />
           <span className="scene-lightning" />
-          <span className="scene-mist" />
-          <span className="scene-skyline" />
         </div>
         <div className="weather-hero-content">
           <div

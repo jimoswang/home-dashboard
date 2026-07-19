@@ -64,4 +64,25 @@ describe("HKO weather fault isolation", () => {
     expect(snapshot.freshness).toBe("fresh");
     expect(snapshot.warningFreshness).toBe("unavailable");
   });
+
+  it("keeps warnings fresh when one live language endpoint succeeds", async () => {
+    const warningSummary = { WTS: { code: "WTS", name: "雷暴警告" } };
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("dataType=rhrread") && url.includes("lang=tc")) {
+        return new Response(JSON.stringify({
+          updateTime: "2026-07-19T16:30:00+08:00",
+          temperature: { data: [{ place: "沙田", value: 31 }] }
+        }), { status: 200 });
+      }
+      if (url.includes("dataType=warnsum") && url.includes("lang=tc")) {
+        return new Response(JSON.stringify(warningSummary), { status: 200 });
+      }
+      throw new Error("English HKO endpoint unavailable");
+    }));
+
+    const snapshot = await fetchWeather("沙田", "Sha Tin");
+    expect(snapshot.warnings).toHaveLength(1);
+    expect(snapshot.warningFreshness).toBe("fresh");
+  });
 });

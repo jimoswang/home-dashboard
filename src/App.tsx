@@ -78,7 +78,7 @@ const emptyRadar: RadarSnapshot = {
   freshness: "unavailable"
 };
 
-const APP_VERSION = "1.3.1";
+const APP_VERSION = "1.3.2";
 const APP_BUILD = (import.meta.env.VITE_BUILD_ID || "LOCAL").slice(0, 7).toUpperCase();
 
 function newId(prefix: string): string {
@@ -499,7 +499,7 @@ function SettingsPanel({ config, onChange, onClose }: SettingsPanelProps) {
           <div className="segmented">
             {[30, 60, 120, 300].map((seconds) => <button key={seconds} className={draft.refreshSeconds === seconds ? "active" : ""} onClick={() => setDraft((current) => ({ ...current, refreshSeconds: seconds }))}>{seconds < 60 ? `${seconds}秒` : `${seconds / 60}分鐘`}<small>{seconds}s</small></button>)}
           </div>
-          <p className="helper-text">天氣每10分鐘、警告及雷達每5分鐘更新。Weather every 10m; warnings and radar every 5m.</p>
+          <p className="helper-text">天氣、警告及雷達每5分鐘更新。Weather, warnings and radar every 5m.</p>
         </section>
 
         <section className="settings-card">
@@ -811,6 +811,7 @@ export default function App() {
             <b>{(weather.rainfallMax ?? 0) > 0 ? "出門記得帶遮" : weather.warnings.length > 0 ? "留意天氣警告" : "暫未錄得降雨"}</b>
             <span>{(weather.rainfallMax ?? 0) > 0 ? "Remember your umbrella" : weather.warnings.length > 0 ? "Weather warning in force" : "No rainfall recorded"}</span>
           </div>
+          {weather.freshness === "unavailable" && weather.error && <div className="weather-message"><b>天氣資料暫時受阻</b><span>{weather.error}</span></div>}
           {weather.warningMessageTc[0] && weather.warnings.length === 0 && <div className="weather-message"><b>{weather.warningMessageTc[0]}</b><span>{weather.warningMessageEn[0]}</span></div>}
           {radar.imageUrl ? (
             <button className="radar-preview" onClick={() => setRadarOpen(true)} aria-label="放大天文台128公里雷達圖 Enlarge HKO 128 km radar">

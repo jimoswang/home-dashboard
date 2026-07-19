@@ -399,8 +399,8 @@ interface WeatherWarningsResult {
 
 export async function fetchWeatherWarnings(): Promise<WeatherWarningsResult> {
   const [warningsTcResult, warningsEnResult] = await Promise.allSettled([
-    requestJson<HkoWarningSummary>(`${HKO_BASE}?dataType=warnsum&lang=tc`, "weather:hko:warnings:tc"),
-    requestJson<HkoWarningSummary>(`${HKO_BASE}?dataType=warnsum&lang=en`, "weather:hko:warnings:en")
+    requestJson<HkoWarningSummary>(`${HKO_BASE}?dataType=warnsum&lang=tc`, "weather:hko:warnings:tc", 12_000),
+    requestJson<HkoWarningSummary>(`${HKO_BASE}?dataType=warnsum&lang=en`, "weather:hko:warnings:en", 12_000)
   ]);
   if (warningsTcResult.status === "rejected" && warningsEnResult.status === "rejected") {
     throw new Error("Weather warnings unavailable");
@@ -411,13 +411,16 @@ export async function fetchWeatherWarnings(): Promise<WeatherWarningsResult> {
     ...Object.keys(warningsTc?.data ?? {}),
     ...Object.keys(warningsEn?.data ?? {})
   ])];
+  const availableResults = [warningsTc, warningsEn].filter((result): result is FetchResult<HkoWarningSummary> => result !== null);
   return {
     warnings: warningCodes.map((code) => ({
       code,
       nameTc: warningsTc?.data[code]?.name ?? warningsEn?.data[code]?.name ?? code,
       nameEn: warningsEn?.data[code]?.name ?? warningsTc?.data[code]?.name ?? code
     })),
-    stale: !warningsTc || !warningsEn || warningsTc.stale || warningsEn.stale
+    // One live language response is enough to prove the warning service is
+    // current. The other language can fall back without degrading the whole app.
+    stale: availableResults.every((result) => result.stale)
   };
 }
 
@@ -433,9 +436,9 @@ export async function loadWeatherStations(): Promise<Array<{ tc: string; en: str
 
 export async function fetchWeather(stationTc: string, stationEn: string): Promise<WeatherSnapshot> {
   try {
-    const currentTc = await requestJson<HkoCurrent>(`${HKO_BASE}?dataType=rhrread&lang=tc`, "weather:hko:current:tc", 8_000);
+    const currentTc = await requestJson<HkoCurrent>(`${HKO_BASE}?dataType=rhrread&lang=tc`, "weather:hko:current:tc", 15_000);
     const [currentEnResult, warningResult] = await Promise.allSettled([
-      requestJson<HkoCurrent>(`${HKO_BASE}?dataType=rhrread&lang=en`, "weather:hko:current:en"),
+      requestJson<HkoCurrent>(`${HKO_BASE}?dataType=rhrread&lang=en`, "weather:hko:current:en", 12_000),
       fetchWeatherWarnings()
     ]);
     const currentEn = currentEnResult.status === "fulfilled" ? currentEnResult.value : null;
@@ -471,7 +474,9 @@ export async function fetchWeather(stationTc: string, stationEn: string): Promis
       updatedAt: "",
       fetchedAt: new Date().toISOString(),
       freshness: "unavailable",
-      error: error instanceof Error ? error.message : "Weather unavailable"
+      error: error instanceof Error && error.name === "AbortError"
+        ? "天文台回應逾時，將自動重試 · HKO response timed out; retrying automatically"
+        : "天文台暫時無法連線，將自動重試 · HKO temporarily unavailable; retrying automatically"
     };
   }
 }

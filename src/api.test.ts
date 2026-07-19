@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchBoardEta, POLL_INTERVALS, radarCandidateUrls } from "./api";
+import { fetchBoardEta, fetchWeather, POLL_INTERVALS, radarCandidateUrls } from "./api";
 import { defaultConfig } from "./config";
 
 describe("KMB ETA normalization", () => {
@@ -36,6 +36,32 @@ describe("HKO 128 km radar candidates", () => {
   it("checks for a new radar image every five minutes while respecting six-minute scan slots", () => {
     expect(POLL_INTERVALS.radar).toBe(5 * 60_000);
     expect(POLL_INTERVALS.warnings).toBe(5 * 60_000);
-    expect(POLL_INTERVALS.weather).toBe(10 * 60_000);
+    expect(POLL_INTERVALS.weather).toBe(5 * 60_000);
+  });
+});
+
+describe("HKO weather fault isolation", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("keeps current conditions fresh when optional English and warning calls fail", async () => {
+    const currentTc = {
+      updateTime: "2026-07-19T16:30:00+08:00",
+      icon: [50],
+      temperature: { data: [{ place: "沙田", value: 31 }] },
+      humidity: { data: [{ place: "香港天文台", value: 81 }] },
+      rainfall: { data: [{ place: "沙田", min: 0, max: 0 }] }
+    };
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("dataType=rhrread") && url.includes("lang=tc")) {
+        return new Response(JSON.stringify(currentTc), { status: 200 });
+      }
+      throw new Error("Optional HKO endpoint unavailable");
+    }));
+
+    const snapshot = await fetchWeather("沙田", "Sha Tin");
+    expect(snapshot.temperature).toBe(31);
+    expect(snapshot.freshness).toBe("fresh");
+    expect(snapshot.warningFreshness).toBe("unavailable");
   });
 });

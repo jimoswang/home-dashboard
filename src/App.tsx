@@ -65,6 +65,7 @@ const emptyWeather: WeatherSnapshot = {
   warnings: [],
   warningMessageTc: [],
   warningMessageEn: [],
+  warningFreshness: "unavailable",
   updatedAt: "",
   fetchedAt: "",
   freshness: "unavailable"
@@ -77,7 +78,7 @@ const emptyRadar: RadarSnapshot = {
   freshness: "unavailable"
 };
 
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "1.3.1";
 const APP_BUILD = (import.meta.env.VITE_BUILD_ID || "LOCAL").slice(0, 7).toUpperCase();
 
 function newId(prefix: string): string {
@@ -562,9 +563,16 @@ export default function App() {
   const refreshWarnings = useCallback(async () => {
     try {
       const result = await fetchWeatherWarnings();
-      setWeather((current) => ({ ...current, warnings: result.warnings }));
+      setWeather((current) => ({
+        ...current,
+        warnings: result.warnings,
+        warningFreshness: result.stale ? "stale" : "fresh"
+      }));
     } catch {
-      // Keep the last warning summary if HKO is temporarily unavailable.
+      setWeather((current) => ({
+        ...current,
+        warningFreshness: current.warnings.length > 0 ? "stale" : "unavailable"
+      }));
     }
   }, []);
 
@@ -684,6 +692,7 @@ export default function App() {
   const servicesLoaded = weather.fetchedAt !== "" && radar.fetchedAt !== "" && profileBoards.every((board) => transit[board.id]?.fetchedAt);
   const affectedServicesTc = [
     weather.freshness !== "fresh" ? "天氣" : null,
+    weather.freshness === "fresh" && weather.warningFreshness !== "fresh" ? "天氣警告" : null,
     radar.freshness !== "fresh" ? "雷達" : null,
     ...profileBoards.map((board) => {
       const snapshot = transit[board.id];
@@ -692,6 +701,7 @@ export default function App() {
   ].filter((label): label is string => Boolean(label));
   const affectedServicesEn = [
     weather.freshness !== "fresh" ? "WEATHER" : null,
+    weather.freshness === "fresh" && weather.warningFreshness !== "fresh" ? "WEATHER WARNINGS" : null,
     radar.freshness !== "fresh" ? "RADAR" : null,
     ...profileBoards.map((board) => {
       const snapshot = transit[board.id];
@@ -813,7 +823,7 @@ export default function App() {
           ) : (
             <div className="radar-unavailable"><CloudRain /><span><b>雷達圖暫時無法連線</b><small>Radar temporarily unavailable</small></span></div>
           )}
-          <footer>天文台更新 HKO updated {formatUpdated(weather.updatedAt)} · 雷達每5分鐘檢查 Radar checked every 5m</footer>
+          <footer>天氣及雷達每5分鐘更新 · Weather &amp; radar refresh every 5m · {formatUpdated(weather.updatedAt)}</footer>
         </section>
 
         <section className="bus-panel panel">

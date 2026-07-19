@@ -18,7 +18,7 @@ const HKO_RADAR_BASE = "https://www.hko.gov.hk/wxinfo/radars/rad_128_png";
 const HKO_RADAR_CACHE_KEY = "radar:hko:128km:latest";
 
 export const POLL_INTERVALS = {
-  weather: 10 * 60_000,
+  weather: 5 * 60_000,
   warnings: 5 * 60_000,
   radar: 5 * 60_000
 } as const;
@@ -48,13 +48,23 @@ async function requestJson<T>(url: string, cacheKey: string, timeoutMs = 5_000):
       if (attempt > 0) await new Promise((resolve) => window.setTimeout(resolve, 300 + Math.random() * 400));
       const response = await fetchWithTimeout(url, timeoutMs);
       const data = await response.json() as T;
-      await cacheSet(cacheKey, data);
+      try {
+        await cacheSet(cacheKey, data);
+      } catch {
+        // A successful network response must remain usable if browser storage
+        // is unavailable or temporarily locked (notably older iOS Safari).
+      }
       return { data, stale: false, storedAt: Date.now() };
     } catch (caught) {
       error = caught;
     }
   }
-  const cached = await cacheGet<T>(cacheKey);
+  let cached: Awaited<ReturnType<typeof cacheGet<T>>> = null;
+  try {
+    cached = await cacheGet<T>(cacheKey);
+  } catch {
+    // Cache is a fallback, never a dependency of the live API path.
+  }
   if (cached) return { data: cached.value, stale: true, storedAt: cached.storedAt };
   throw error instanceof Error ? error : new Error("Network unavailable");
 }
@@ -388,18 +398,26 @@ interface WeatherWarningsResult {
 }
 
 export async function fetchWeatherWarnings(): Promise<WeatherWarningsResult> {
-  const [warningsTc, warningsEn] = await Promise.all([
+  const [warningsTcResult, warningsEnResult] = await Promise.allSettled([
     requestJson<HkoWarningSummary>(`${HKO_BASE}?dataType=warnsum&lang=tc`, "weather:hko:warnings:tc"),
     requestJson<HkoWarningSummary>(`${HKO_BASE}?dataType=warnsum&lang=en`, "weather:hko:warnings:en")
   ]);
-  const warningCodes = Object.keys(warningsTc.data);
+  if (warningsTcResult.status === "rejected" && warningsEnResult.status === "rejected") {
+    throw new Error("Weather warnings unavailable");
+  }
+  const warningsTc = warningsTcResult.status === "fulfilled" ? warningsTcResult.value : null;
+  const warningsEn = warningsEnResult.status === "fulfilled" ? warningsEnResult.value : null;
+  const warningCodes = [...new Set([
+    ...Object.keys(warningsTc?.data ?? {}),
+    ...Object.keys(warningsEn?.data ?? {})
+  ])];
   return {
     warnings: warningCodes.map((code) => ({
       code,
-      nameTc: warningsTc.data[code]?.name ?? code,
-      nameEn: warningsEn.data[code]?.name ?? code
+      nameTc: warningsTc?.data[code]?.name ?? warningsEn?.data[code]?.name ?? code,
+      nameEn: warningsEn?.data[code]?.name ?? warningsTc?.data[code]?.name ?? code
     })),
-    stale: warningsTc.stale || warningsEn.stale
+    stale: !warningsTc || !warningsEn || warningsTc.stale || warningsEn.stale
   };
 }
 
@@ -415,27 +433,29 @@ export async function loadWeatherStations(): Promise<Array<{ tc: string; en: str
 
 export async function fetchWeather(stationTc: string, stationEn: string): Promise<WeatherSnapshot> {
   try {
-    const [currentTc, currentEn, warningResult] = await Promise.all([
-      requestJson<HkoCurrent>(`${HKO_BASE}?dataType=rhrread&lang=tc`, "weather:hko:current:tc"),
+    const currentTc = await requestJson<HkoCurrent>(`${HKO_BASE}?dataType=rhrread&lang=tc`, "weather:hko:current:tc", 8_000);
+    const [currentEnResult, warningResult] = await Promise.allSettled([
       requestJson<HkoCurrent>(`${HKO_BASE}?dataType=rhrread&lang=en`, "weather:hko:current:en"),
       fetchWeatherWarnings()
     ]);
+    const currentEn = currentEnResult.status === "fulfilled" ? currentEnResult.value : null;
+    const warnings = warningResult.status === "fulfilled" ? warningResult.value : null;
     const temperature = currentTc.data.temperature?.data.find((item) => item.place === stationTc)?.value ?? null;
     const rainfall = currentTc.data.rainfall?.data.find((item) => item.place === stationTc);
     const humidity = currentTc.data.humidity?.data[0]?.value ?? null;
-    const stale = currentTc.stale || currentEn.stale || warningResult.stale;
     return {
       temperature,
       humidity,
       rainfallMin: rainfall?.min ?? null,
       rainfallMax: rainfall?.max ?? null,
       iconCode: currentTc.data.icon?.[0] ?? null,
-      warnings: warningResult.warnings,
+      warnings: warnings?.warnings ?? [],
       warningMessageTc: currentTc.data.warningMessage ?? [],
-      warningMessageEn: currentEn.data.warningMessage ?? [],
+      warningMessageEn: currentEn?.data.warningMessage ?? [],
+      warningFreshness: warnings ? (warnings.stale ? "stale" : "fresh") : "unavailable",
       updatedAt: currentTc.data.updateTime ?? new Date().toISOString(),
       fetchedAt: new Date().toISOString(),
-      freshness: stale ? "stale" : "fresh"
+      freshness: currentTc.stale ? "stale" : "fresh"
     };
   } catch (error) {
     return {
@@ -447,6 +467,7 @@ export async function fetchWeather(stationTc: string, stationEn: string): Promis
       warnings: [],
       warningMessageTc: [],
       warningMessageEn: [],
+      warningFreshness: "unavailable",
       updatedAt: "",
       fetchedAt: new Date().toISOString(),
       freshness: "unavailable",

@@ -93,6 +93,7 @@ export interface WeatherSnapshot {
   warnings: WeatherWarning[];
   warningMessageTc: string[];
   warningMessageEn: string[];
+  warningFreshness: DataFreshness;
   updatedAt: string;
   fetchedAt: string;
   freshness: DataFreshness;

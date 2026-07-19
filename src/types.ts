@@ -31,6 +31,7 @@ export interface DisplaySettings {
   wakeTime: string;
   theme: "kmb" | "dark";
   pixelShift: boolean;
+  weatherAnimation?: boolean;
 }
 
 export interface Profile {

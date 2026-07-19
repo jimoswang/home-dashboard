@@ -3,13 +3,16 @@ import {
   BusFront,
   Cloud,
   CloudLightning,
+  CloudMoon,
   CloudRain,
   CloudSun,
+  CloudSunRain,
   Download,
   Droplets,
   GripVertical,
   Maximize2,
   MonitorOff,
+  Moon,
   Plus,
   RefreshCw,
   Settings,
@@ -17,6 +20,7 @@ import {
   Sun,
   Trash2,
   Upload,
+  Wind,
   Wifi,
   WifiOff,
   X
@@ -50,6 +54,7 @@ import type {
   TransitSnapshot,
   WeatherSnapshot
 } from "./types";
+import { resolveHeroScene, resolveWeatherPresentation, type WeatherGlyph } from "./weatherPresentation";
 
 const emptyWeather: WeatherSnapshot = {
   temperature: null,
@@ -72,7 +77,7 @@ const emptyRadar: RadarSnapshot = {
   freshness: "unavailable"
 };
 
-const APP_VERSION = "1.1.1";
+const APP_VERSION = "1.2.0";
 const APP_BUILD = (import.meta.env.VITE_BUILD_ID || "LOCAL").slice(0, 7).toUpperCase();
 
 function newId(prefix: string): string {
@@ -119,13 +124,17 @@ function formatUpdated(value: string): string {
   return Number.isNaN(date.getTime()) ? "--:--" : formatTime(date);
 }
 
-function WeatherIcon({ code }: { code: number | null }) {
-  const props = { size: 72, strokeWidth: 1.6, "aria-hidden": true };
-  if (code === null) return <Cloud {...props} />;
-  if ([50, 51, 52, 60, 61, 62].includes(code)) return <Sun {...props} />;
-  if ([53, 54, 63, 64].includes(code)) return <CloudSun {...props} />;
-  if ([65].includes(code)) return <CloudLightning {...props} />;
-  if (code >= 70 && code <= 79) return <CloudRain {...props} />;
+function WeatherIcon({ glyph, size = 72 }: { glyph: WeatherGlyph; size?: number }) {
+  const props = { size, strokeWidth: 1.6, "aria-hidden": true };
+  if (glyph === "sun") return <Sun {...props} />;
+  if (glyph === "cloud-sun") return <CloudSun {...props} />;
+  if (glyph === "sun-rain") return <CloudSunRain {...props} />;
+  if (glyph === "rain") return <CloudRain {...props} />;
+  if (glyph === "thunderstorm") return <CloudLightning {...props} />;
+  if (glyph === "moon") return <Moon {...props} />;
+  if (glyph === "cloud-moon") return <CloudMoon {...props} />;
+  if (glyph === "wind") return <Wind {...props} />;
+  if (glyph === "droplets") return <Droplets {...props} />;
   return <Cloud {...props} />;
 }
 
@@ -355,7 +364,7 @@ function SettingsPanel({ config, onChange, onClose }: SettingsPanelProps) {
       weatherStationTc: "沙田",
       weatherStationEn: "Sha Tin",
       transitBoards: [],
-      display: { alwaysOn: false, sleepTime: "20:00", wakeTime: "06:30", theme: "kmb", pixelShift: true }
+      display: { alwaysOn: false, sleepTime: "20:00", wakeTime: "06:30", theme: "kmb", pixelShift: true, weatherAnimation: true }
     };
     setDraft((current) => ({ ...current, activeProfileId: id, profiles: [...current.profiles, next] }));
   };
@@ -457,6 +466,7 @@ function SettingsPanel({ config, onChange, onClose }: SettingsPanelProps) {
             </select>
           </label>
           <label className="toggle-row"><input type="checkbox" checked={profile.display.alwaysOn} onChange={(event) => updateProfile((item) => ({ ...item, display: { ...item.display, alwaysOn: event.target.checked } }))} /><span><b>長開螢幕</b><small>Always on</small></span></label>
+          <label className="toggle-row"><input type="checkbox" checked={profile.display.weatherAnimation !== false} onChange={(event) => updateProfile((item) => ({ ...item, display: { ...item.display, weatherAnimation: event.target.checked } }))} /><span><b>天氣背景動畫</b><small>Weather background animation</small></span></label>
           <div className="two-columns schedule-fields">
             <label><span>關閉 Sleep</span><input type="time" disabled={profile.display.alwaysOn} value={profile.display.sleepTime} onChange={(event) => updateProfile((item) => ({ ...item, display: { ...item.display, sleepTime: event.target.value } }))} /></label>
             <label><span>亮起 Wake</span><input type="time" disabled={profile.display.alwaysOn} value={profile.display.wakeTime} onChange={(event) => updateProfile((item) => ({ ...item, display: { ...item.display, wakeTime: event.target.value } }))} /></label>
@@ -706,6 +716,9 @@ export default function App() {
         : "CONNECTED";
   const radarDelayed = radar.freshness === "stale" || (radar.capturedAt ? now.getTime() - new Date(radar.capturedAt).getTime() > 18 * 60_000 : false);
   const pixelShift = activeProfile.display.pixelShift ? `shift-${now.getMinutes() % 4}` : "";
+  const weatherPresentation = resolveWeatherPresentation(weather.iconCode);
+  const heroScene = resolveHeroScene(weatherPresentation.scene, weather.warnings.map((warning) => warning.code));
+  const weatherMotion = activeProfile.display.weatherAnimation !== false ? "weather-motion" : "weather-still";
 
   if (sleeping && !settingsOpen) {
     return (
@@ -718,42 +731,54 @@ export default function App() {
 
   return (
     <div className={`app-shell theme-${activeProfile.display.theme} ${pixelShift}`}>
-      <header className="topbar">
-        <div
-          className="clock-zone"
-          onPointerDown={startHold}
-          onPointerUp={cancelHold}
-          onPointerCancel={cancelHold}
-          onPointerLeave={cancelHold}
-          style={{ "--hold-progress": `${holdProgress * 360}deg` } as React.CSSProperties}
-          title="Long press 3 seconds for settings"
-        >
-          <div className="clock"><span>{formatTime(now)}</span><small>{formatSeconds(now)}</small></div>
-          <div className="date"><b>{formatDateTc(now)}</b><span>{formatDateEn(now)}</span></div>
+      <header className={`weather-hero scene-${heroScene} ${weatherMotion}`}>
+        <div className="weather-scene" aria-hidden="true">
+          <span className="scene-orb" />
+          <span className="scene-cloud scene-cloud-one" />
+          <span className="scene-cloud scene-cloud-two" />
+          <span className="scene-rain" />
+          <span className="scene-lightning" />
+          <span className="scene-mist" />
+          <span className="scene-skyline" />
         </div>
-        <div className="profile-zone">
-          <select value={config.activeProfileId} onChange={(event) => setConfig((current) => ({ ...current, activeProfileId: event.target.value }))}>
-            {config.profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.nameTc}</option>)}
-          </select>
-          <div className={`connection ${connectionClass}`} title={`${connectionTitle} · ${connectionSubtitle}`}>
-            {online ? <Wifi /> : <WifiOff />}
-            <span><b>{connectionTitle}</b><small>{connectionSubtitle}</small></span>
+        <div className="weather-hero-content">
+          <div
+            className="clock-zone"
+            onPointerDown={startHold}
+            onPointerUp={cancelHold}
+            onPointerCancel={cancelHold}
+            onPointerLeave={cancelHold}
+            style={{ "--hold-progress": `${holdProgress * 360}deg` } as React.CSSProperties}
+            title="Long press 3 seconds for settings"
+          >
+            <div className="clock"><span>{formatTime(now)}</span><small>{formatSeconds(now)}</small></div>
+            <div className="date"><b>{formatDateTc(now)}</b><span>{formatDateEn(now)}</span></div>
           </div>
-          <button
-            className={`refresh-button ${refreshing || checkingUpdate ? "spinning" : ""}`}
-            onClick={() => void refreshAllAndCheckUpdate()}
-            aria-label="更新資料及檢查新版 Refresh data and check for updates"
-            title="更新資料及檢查新版"
-          ><RefreshCw /></button>
+          <div className="profile-zone">
+            <select value={config.activeProfileId} onChange={(event) => setConfig((current) => ({ ...current, activeProfileId: event.target.value }))}>
+              {config.profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.nameTc}</option>)}
+            </select>
+            <div className={`connection ${connectionClass}`} title={`${connectionTitle} · ${connectionSubtitle}`}>
+              {online ? <Wifi /> : <WifiOff />}
+              <span><b>{connectionTitle}</b><small>{connectionSubtitle}</small></span>
+            </div>
+            <button
+              className={`refresh-button ${refreshing || checkingUpdate ? "spinning" : ""}`}
+              onClick={() => void refreshAllAndCheckUpdate()}
+              aria-label="更新資料及檢查新版 Refresh data and check for updates"
+              title="更新資料及檢查新版"
+            ><RefreshCw /></button>
+          </div>
+        </div>
+        <div className={`hero-ribbon ${weather.warnings.length > 0 ? "warning" : "quiet"}`} title={weather.warnings.map((warning) => `${warning.nameTc} ${warning.nameEn}`).join(" · ")}>
+          {weather.warnings.length > 0 ? <CloudLightning /> : <WeatherIcon glyph={weatherPresentation.glyph} size={25} />}
+          <div>
+            <b>{weather.warnings.length > 0 ? weather.warnings.map((warning) => warning.nameTc).join(" · ") : weatherPresentation.labelTc}</b>
+            <span>{weather.warnings.length > 0 ? weather.warnings.map((warning) => warning.nameEn).join(" · ") : weatherPresentation.labelEn}</span>
+          </div>
+          <small>天文台更新 {formatUpdated(weather.updatedAt)} · HKO UPDATED</small>
         </div>
       </header>
-
-      {weather.warnings.length > 0 && (
-        <div className="warning-strip">
-          <CloudLightning />
-          <div><b>{weather.warnings.map((warning) => warning.nameTc).join(" · ")}</b><span>{weather.warnings.map((warning) => warning.nameEn).join(" · ")}</span></div>
-        </div>
-      )}
 
       <main className="dashboard-grid">
         <section className="weather-card panel">
@@ -762,7 +787,7 @@ export default function App() {
             <StatusPill freshness={weather.freshness} />
           </div>
           <div className="weather-main">
-            <WeatherIcon code={weather.iconCode} />
+            <WeatherIcon glyph={weatherPresentation.glyph} />
             <div className="temperature"><strong>{weather.temperature ?? "—"}</strong><sup>°C</sup></div>
             <div className="station-name"><b>{activeProfile.weatherStationTc}</b><span>{activeProfile.weatherStationEn}</span></div>
           </div>

@@ -47,7 +47,8 @@ const configSchema = z.object({
       sleepTime: z.string().regex(/^\d{2}:\d{2}$/),
       wakeTime: z.string().regex(/^\d{2}:\d{2}$/),
       theme: z.enum(["kmb", "dark"]),
-      pixelShift: z.boolean()
+      pixelShift: z.boolean(),
+      weatherAnimation: z.boolean().optional()
     })
   })).min(1)
 });
@@ -68,7 +69,8 @@ export const defaultConfig: AppConfig = {
         sleepTime: "20:00",
         wakeTime: "06:30",
         theme: "kmb",
-        pixelShift: true
+        pixelShift: true,
+        weatherAnimation: true
       },
       transitBoards: [
         {
